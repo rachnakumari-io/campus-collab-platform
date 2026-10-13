@@ -1,0 +1,114 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum PostType {
+  HELP_REQUEST
+  PROJECT_TEAM
+  HACKATHON_TEAM
+}
+
+enum PostStatus {
+  OPEN
+  CLOSED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model College {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  domain    String?
+  students  Student[]
+  createdAt DateTime  @default(now())
+}
+
+model Student {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole   @default(STUDENT)
+  bio          String     @default("")
+  skills       String[]   @default([])
+  interests    String[]   @default([])
+  portfolioUrl String?
+  collegeId    String
+  college      College    @relation(fields: [collegeId], references: [id])
+  posts        Post[]
+  requests     CollaborationRequest[]
+  suggestions  SkillSuggestion[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Post {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  type           PostType
+  status         PostStatus   @default(OPEN)
+  requiredSkills String[]     @default([])
+  authorId       String
+  author         Student      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  requests       CollaborationRequest[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([type, status, createdAt])
+  @@index([authorId])
+}
+
+model CollaborationRequest {
+  id          String        @id @default(cuid())
+  postId      String
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   Student       @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  message     String
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([postId, requesterId])
+  @@index([requesterId, status])
+}
+
+model SkillSuggestion {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  status    SuggestionStatus @default(PENDING)
+  studentId String
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+}
+
+model OfficialSkill {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
